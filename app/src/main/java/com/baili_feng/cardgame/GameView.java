@@ -91,24 +91,40 @@ public class GameView extends View {
         }
         float stroke = 1.0f;
         float shadow = 5.0f;
+        float round = 10;
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(Color.BLACK);
-        canvas.drawRect(x + shadow, y + shadow, x + w, y + h, paint);
+        paint.setColor(Color.DKGRAY);
+        canvas.drawRoundRect(new RectF(x + shadow, y + shadow, x + w, y + h), round, round, paint);
 
         paint.setColor(0xffcccccc);
-        canvas.drawRect(x, y, x + w - shadow, y + h - shadow, paint);
+        canvas.drawRoundRect(new RectF(x, y, x + w - shadow, y + h - shadow), round, round, paint);
 
-        drawRectLine(canvas, x, y, x + w - shadow, y + h - shadow, color, stroke);
-        /*
-        float[] pts = {x,y+stroke,x+w-shadow,y+stroke,
-                        x+w-shadow-stroke,y+stroke,x+w-shadow-stroke,y+h-shadow-stroke,
-                        x+w-shadow,y+h-shadow-stroke,x,y+h-shadow-stroke,
-                        x+stroke,y+h-shadow-stroke,x+stroke,y+stroke};
-        paint.setStrokeWidth(stroke * 2);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(stroke);
         paint.setColor(color);
-        canvas.drawLines(pts, paint);
-        */
+        canvas.drawRoundRect(new RectF(x, y, x + w - shadow, y + h - shadow), round, round, paint);
+        //drawRectLine(canvas, x, y, x + w - shadow, y + h - shadow, color, stroke);
         drawText(x + w / 2, y + h / 2.5f, canvas, (int) (h / 4), color, " " + card.mValue + " ", Paint.Align.CENTER);
+    }
+
+    private void drawActionBar(Canvas canvas, int action) {
+        float x = mWidth/10;
+        float y = mHeight/10;
+        float w = mWidth*8/10;
+        float h = mHeight*8/10;
+        float shadow = 5.0f;
+        float round = 10;
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(0x33000000);
+        canvas.drawRoundRect(new RectF(x + shadow, y + shadow, x + w, y + h), round, round, paint);
+
+        paint.setColor(0x33cc00cc);
+        canvas.drawRoundRect(new RectF(x, y, x + (w - shadow) / 2, y + h - shadow), round, round, paint);
+        drawText(x + w / 4, y + h / 2, canvas, 70, Color.BLACK, "胡", Paint.Align.CENTER);
+
+        paint.setColor(0x3300cccc);
+        canvas.drawRoundRect(new RectF(x + (w - shadow) / 2, y, x + w - shadow, y + h - shadow), round, round, paint);
+        drawText(x + w * 3 / 4, y + h / 2, canvas, 70, Color.BLACK, "取消", Paint.Align.CENTER);
     }
 
     private void drawText(float left, float top, Canvas canvas, int textSize,
@@ -148,17 +164,12 @@ public class GameView extends View {
         if(player.mLastCard != null) {
             drawCard(canvas, player.mLastCard, x + w * i * inc + offlast, y, w, h);
         }
+        /*
         if(idx == 0) {
             RectF rect = getPlayerArea();
             drawRectLine(canvas, rect.left, rect.top, rect.right, rect.bottom, Color.MAGENTA, 5);
-            /*
-            float r = x + w * i * inc;
-            if(player.mLastCard != null) {
-                r += w*inc + offlast;
-            }
-            drawRectLine(canvas, x, y, r, y + h, Color.MAGENTA, 5);
-            */
         }
+        */
     }
 
     @Override
@@ -181,12 +192,33 @@ public class GameView extends View {
             for(i = 0; i < mGame.mPlayers.size(); i++) {
                 drawPlayer(canvas, i);
             }
+            if(mGame.mTmpCard != null) {
+                drawCard(canvas, mGame.mTmpCard, (mWidth-mCardWidth0)/2, (mHeight-mCardHeight0)/2, mCardWidth0, mCardHeight0);
+            }
+
             if(state == Game.GAME_PREPARE) {
                 mGame.prepare();
             } else if(state == Game.GAME_LOOP) {
+                if(mGame.mPlayers.get(0).mWaitAction != Player.ACTION_NONE) {
+                    drawActionBar(canvas, Player.ACTION_HU | Player.ACTION_CANCEL);
+                }
                 mGame.loop();
+            } else if(state == Game.GAME_SCORE) {
+                drawText(640, 380, canvas, 100, Color.GREEN, "Touch to RESTART!", Paint.Align.CENTER);
             }
         }
+    }
+
+    private boolean hasAction(int cur, int action) {
+        return (cur & action) == action;
+    }
+
+    private int setAction(int cur, int action) {
+        return cur | action;
+    }
+
+    private int clearAction(int cur, int action) {
+        return cur & ~action;
     }
 
     public void setTouchListener() {
@@ -203,30 +235,46 @@ public class GameView extends View {
         });
     }
 
-    private void onTouchDown(MotionEvent event) {
+    private void onTouchUp(MotionEvent event) {
 
     }
-    private void onTouchUp(MotionEvent event) {
+    private void onTouchDown(MotionEvent event) {
         int state = mGame.getState();
-        if (state == Game.GAME_READY) {
+        if (state == Game.GAME_READY || state == Game.GAME_SCORE) {
+            mGame.reset();
             mGame.start();
         } else if (state == Game.GAME_PREPARE) {
             mGame.prepare();
         } else if (state == Game.GAME_LOOP) {
             float x = event.getX();
             float y = event.getY();
-            int idx = getTouchIndex(x, y);
+            int idx;
+
+            if(mGame.mPlayers.get(0).mWaitAction != Player.ACTION_NONE) {
+                idx = getActionBarIndex(x, y);
+                Message message = new Message();
+                if(idx == 0) message.what = Player.ACTION_HU;
+                if(idx == 1) message.what = Player.ACTION_CANCEL;
+                message.arg1 = 0;
+                //mHandler.sendMessageDelayed(message,300);
+                mHandler.sendMessage(message);
+                Log.i(TAG, "Player 0" + " send Action " + idx);
+                return;
+            }
+            idx = getTouchIndex(x, y);
             Log.i(TAG, "idx is " + idx);
             Game.GameWait wait = mGame.mWait;
             if (idx != -1 && wait != null &&
                     wait.who == 0 &&
-                    wait.action == Player.ACTION_CHUPAI) {
+                    hasAction(wait.action, Player.ACTION_CHUPAI)
+                    ) {
                 Message message = new Message();
                 message.what = Player.ACTION_CHUPAI;
                 message.arg1 = 0;
                 message.arg2 = idx;
                 //mHandler.sendMessageDelayed(message,300);
                 mHandler.sendMessage(message);
+                Log.i(TAG, "Player 0" + " chupai " + idx);
             }
         }
     }
@@ -244,6 +292,11 @@ public class GameView extends View {
             idx = (int)((x - rect.left)/mCardWidth0);
         }
         return idx;
+    }
+
+    private int getActionBarIndex(float x, float y) {
+        if(x > mWidth/2) return 1;
+        return 0;
     }
 
     private RectF getPlayerArea() {

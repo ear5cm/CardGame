@@ -20,6 +20,10 @@ abstract class AI {
         sendACK();
     }
 
+    public void chooseAction() {
+        onChooseAction();
+    }
+
     public void addLastCard() {
         sendACK();
     }
@@ -28,19 +32,22 @@ abstract class AI {
 
     }
 
+    public void makeAction(){ sendACK(); }
+
     public void rmCard() {}
 
     public void playCard(){
         onPlayCard();
     }
 
-    private void sendACK() {
+    public void sendACK() {
         Message message = new Message();
         message.what = Player.ACTION_ACK;
-        mPlayer.mHandler.sendMessageDelayed(message,300);
+        mPlayer.mHandler.sendMessageDelayed(message, 300);
         //mPlayer.mHandler.sendMessage(message);
     }
 
+    abstract void onChooseAction();
     abstract void onPlayCard();
     abstract void printName();
 }

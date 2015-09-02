@@ -14,23 +14,22 @@ import java.util.List;
 public class Player {
     private static final String TAG = "Player";
 
-    final public static int ACTION_UNKNOWN = -1;
-    final public static int ACTION_READY = 0;
-    final public static int ACTION_ACK = 100;
-    final public static int ACTION_MAIZHUANG = 101;
-    final public static int ACTION_ZHEZHANG = 102;
-    final public static int ACTION_CHUPAI = 103;
-    final public static int ACTION_CHI = 200;
-    final public static int ACTION_PENG = 201;
-    final public static int ACTION_GANG = 202;
-    final public static int ACTION_TING = 203;
-    final public static int ACTION_HU = 204;
+    final public static int ACTION_UNKNOWN = 0;
+    final public static int ACTION_NONE = 0;
+    final public static int ACTION_READY = 1<<1;
+    final public static int ACTION_ACK = 1<<2;
+    final public static int ACTION_MAIZHUANG = 1<<3;
+    final public static int ACTION_ZHEZHANG = 1<<4;
+    final public static int ACTION_CHUPAI = 1<<5;
+    final public static int ACTION_CHI = 1<<6;
+    final public static int ACTION_PENG = 1<<7;
+    final public static int ACTION_GANG = 1<<8;
+    final public static int ACTION_TING = 1<<9;
+    final public static int ACTION_HU = 1<<10;
+    final public static int ACTION_CANCEL = 1<<11;
 
     public List <Card> mCardList = new ArrayList<>();
-    public List <Card> mTiaoList = new ArrayList<>();
-    public List <Card> mBingList = new ArrayList<>();
-    public List <Card> mWanList = new ArrayList<>();
-    public List <Card> mBaidaList = new ArrayList<>();
+
     public Card mBaida = null;
     // last card from table
     public Card mLastCard = null;
@@ -41,6 +40,7 @@ public class Player {
 
     public Handler mHandler;
     public int mIdx;
+    public int mWaitAction = ACTION_NONE;
 
     public Player(Handler handler, int idx) {
         mHandler = handler;
@@ -53,102 +53,20 @@ public class Player {
     }
 
     public void addCard(Card card) {
+        Log.i(TAG, "Player" + mIdx + " add card, now card num: " + mCardList.size());
         if(card == null) {
             mAI.addCard();
             return;
         }
         if(card.mValue < 0 || card.mValue > 9) return;
-
         mCardList.add(card);
-        if(isBaida(card))
-        {
-            int idx = 0;
-            for(Card c : mBaidaList) {
-                if(c.mValue < card.mValue) {
-                    idx ++;
-                }
-            }
-            mBaidaList.add(idx, card);
-        }
-        else{
-            List <Card> list = null;
-            switch(card.mType) {
-                case Card.CARD_TYPE_TIAO:
-                    list = mTiaoList;
-                    break;
-                case Card.CARD_TYPE_BING:
-                    list = mBingList;
-                    break;
-                case Card.CARD_TYPE_WAN:
-                    list = mWanList;
-                    break;
-                default:
-                    break;
-            }
-            if(list != null) {
-                int idx = 0;
-                for(Card c : list) {
-                    if(c.mValue < card.mValue) {
-                        idx ++;
-                    }
-                }
-                list.add(idx, card);
-            }
-        }
-        mCardList.clear();
-        mCardList.addAll(mTiaoList);
-        mCardList.addAll(mBingList);
-        mCardList.addAll(mWanList);
-        mCardList.addAll(mBaidaList);
+        reorder(mCardList);
         mAI.addCard();
-    }
-
-    public void reset(){
-        mCardList.clear();
-        mTiaoList.clear();
-        mBingList.clear();
-        mWanList.clear();
-        mBaidaList.clear();
-        mBaida = null;
-        mLastCard = null;
-        mTmpCard = null;
-    }
-
-    public void setBaida(Card card) {
-        //Log.i(TAG, "setBaida: " + card.mValue + "/" + card.mType);
-        mBaida = card;
-        reorder();
-        mAI.setBaida();
-    }
-
-    public boolean isBaida(Card card){
-        if(mBaida == null) {
-            return false;
-        }
-        int value1 = mBaida.mValue;
-        int value2 = value1 - 1;
-        if(value2 < 1) value2 = 9;
-        return card.mType == mBaida.mType && (card.mValue == value1 || card.mValue == value2);
-    }
-
-    public void addLastCard(Card card) {
-        mLastCard = card;
-        mAI.addLastCard();
-    }
-
-    public void addTmpCard(Card card) {
-        mTmpCard = card;
-        mAI.addTmpCard();
-    }
-
-    public boolean rmCard(Card card) {
-        mCardList.remove(card);
-        reorder();
-        mAI.rmCard();
-        return true;
+        Log.i(TAG, "Player" + mIdx + " after add card, now card num: " + mCardList.size());
     }
 
     public Card rmCard(int idx) {
+        Log.i(TAG, "Player" + mIdx + " rmCard: " + idx);
         Card card = new Card();
         if(idx < 0 || idx > mCardList.size()) return null;
         if(idx < mCardList.size()) {
@@ -164,9 +82,26 @@ public class Player {
         } else {
             return null;
         }
-        reorder();
+        reorder(mCardList);
         mAI.rmCard();
+        Log.i(TAG, "Player" + mIdx + " after rmCard, now cards no: " + mCardList.size());
         return card;
+    }
+
+    public void setBaida(Card card) {
+        mBaida = card;
+        reorder(mCardList);
+        mAI.setBaida();
+    }
+
+    public void setLastCard(Card card) {
+        mLastCard = card;
+        mAI.addLastCard();
+    }
+
+    public void setTmpCard(Card card) {
+        mTmpCard = card;
+        mAI.addTmpCard();
     }
 
     public void playCard(){
@@ -177,34 +112,132 @@ public class Player {
         return false;
     }
 
-    private void reorder() {
-        mTiaoList.clear();
-        mBingList.clear();
-        mWanList.clear();
-        mBaidaList.clear();
-        for (Iterator<Card> it = mCardList.iterator(); it.hasNext();) {
-            Card card = it.next();
+    public int checkAction(Card card, int owner) {
+        Log.i(TAG, "checkAction: " + mIdx);
+        // if we can do nothing, the only action we could make is CHUPAI
+        //mWaitAction = ACTION_CHUPAI;
+        mWaitAction = ACTION_NONE;
+        if(card == null) {
+            return mWaitAction;
+        }
+        List <Card> list = new ArrayList<>();
+        //list is a temporary copy of mCardList
+        list.addAll(mCardList);
+        list.add(card);
+        reorder(list);
+        if(checkHu(list) == 1){
+            mWaitAction |= ACTION_HU;
+        }
+        return mWaitAction;
+    }
+
+    public int chooseAction(Card card, int owner) {
+        Log.i(TAG, "makeAction: " + mIdx);
+        if(mWaitAction == ACTION_NONE) {
+            Log.i(TAG, "makeAction1: " + mIdx);
+            mAI.playCard();
+        } else {
+            Log.i(TAG, "makeAction2: " + mIdx);
+            mAI.chooseAction();
+        }
+        return 0;
+    }
+
+    public int makeAction(int action, int value) {
+        if(action == ACTION_CANCEL) {
+            mWaitAction = ACTION_NONE;
+        }
+        mAI.makeAction();
+        return 0;
+    }
+
+    private int checkHu(List <Card> cardList) {
+        List<Integer> tlist = new ArrayList<>();
+        List<Integer> blist = new ArrayList<>();
+        List<Integer> wlist = new ArrayList<>();
+        int numBaida = 0;
+        for(Card card : cardList) {
             if(isBaida(card)) {
-                mBaidaList.add(card);
-            }
-            else if(card.mType == Card.CARD_TYPE_TIAO)
-            {
-                mTiaoList.add(card);
-            }
-            else if(card.mType == Card.CARD_TYPE_BING)
-            {
-                mBingList.add(card);
-            }
-            else if(card.mType == Card.CARD_TYPE_WAN)
-            {
-                mWanList.add(card);
+                numBaida ++;
+            } else if(card.mType == Card.CARD_TYPE_TIAO){
+                tlist.add(card.mValue);
+            } else if(card.mType == Card.CARD_TYPE_BING){
+                blist.add(card.mValue);
+            } else if(card.mType == Card.CARD_TYPE_WAN){
+                wlist.add(card.mValue);
             }
         }
+        List<List<Integer>> listlist = new ArrayList<>();
+        listlist.add(tlist);
+        listlist.add(blist);
+        listlist.add(wlist);
+        List<Integer> hu = Rule.getInstance().checkHu(listlist, numBaida);
+        if(hu == null) {
+            return 0;
+        }
+        return 1;
+    }
+
+    private void reorder(List <Card> cardList) {
+        if(cardList == null) {
+            return;
+        }
+        List <Card> tiaoList = new ArrayList<> ();
+        List <Card> bingList = new ArrayList<> ();
+        List <Card> wanList = new ArrayList<> ();
+        List <Card> baidaList = new ArrayList<> ();
+        for (Card card : cardList) {
+            List <Card> list = null;
+            if(isBaida(card)) {
+                list = baidaList;
+            } else {
+                switch (card.mType) {
+                    case Card.CARD_TYPE_TIAO:
+                        list = tiaoList;
+                        break;
+                    case Card.CARD_TYPE_BING:
+                        list = bingList;
+                        break;
+                    case Card.CARD_TYPE_WAN:
+                        list = wanList;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            if(list != null) {
+                int idx = 0;
+                for(Card c : list) {
+                    if(c.mValue < card.mValue) {
+                        idx ++;
+                    }
+                }
+                list.add(idx, card);
+            }
+        }
+        cardList.clear();
+        cardList.addAll(tiaoList);
+        cardList.addAll(bingList);
+        cardList.addAll(wanList);
+        cardList.addAll(baidaList);
+    }
+
+    public boolean isBaida(Card card){
+        if(mBaida == null) {
+            return false;
+        }
+        int value1 = mBaida.mValue;
+        int value2 = value1 - 1;
+        if(value2 < 1) value2 = 9;
+        return card.mType == mBaida.mType && (card.mValue == value1 || card.mValue == value2);
+    }
+
+    public void reset(){
         mCardList.clear();
-        mCardList.addAll(mTiaoList);
-        mCardList.addAll(mBingList);
-        mCardList.addAll(mWanList);
-        mCardList.addAll(mBaidaList);
+        mBaida = null;
+        mLastCard = null;
+        mTmpCard = null;
+        mWaitAction = ACTION_NONE;
     }
 
     public void onTest() {

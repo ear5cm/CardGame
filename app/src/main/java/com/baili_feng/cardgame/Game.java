@@ -16,7 +16,8 @@ public class Game {
     final public static int GAME_READY = 0;
     final public static int GAME_PREPARE = 1;
     final public static int GAME_LOOP = 2;
-    final public static int GAME_OVER = 3;
+    final public static int GAME_SCORE = 3;
+    final public static int GAME_OVER = 4;
 
     private Handler mHandler;
     private Table mTable = new Table();;
@@ -35,7 +36,7 @@ public class Game {
         super();
         mHandler = handler;
         mWait = new GameWait();
-        mWait.action = Player.ACTION_UNKNOWN;
+        mWait.action = Player.ACTION_NONE;
         init();
     }
 
@@ -55,7 +56,13 @@ public class Game {
         reset();
     }
     public void reset() {
+        for(Player player : mPlayers) {
+            player.reset();
+        }
         mTable.reset();
+        mBaida = null;
+        mTmpCard = null;
+        mWait.action = Player.ACTION_NONE;
         mState = GAME_READY;
     }
 
@@ -92,7 +99,7 @@ public class Game {
             return;
         }
         if(mPlayers.get(mCurrentPlayerInx).mCardList.size() == 13) {
-            mPlayers.get(mCurrentPlayerInx).addLastCard(card);
+            mPlayers.get(mCurrentPlayerInx).setLastCard(card);
         } else {
             mPlayers.get(mCurrentPlayerInx).addCard(card);
         }
@@ -103,32 +110,87 @@ public class Game {
     public void loop() {
         Log.i(TAG, "looping...");
         Player player = mPlayers.get(mCurrentPlayerInx);
-        if(player.mLastCard != null) {
-            if(player.checkHu()) {
+        if(player.mLastCard != null && mWait.action == Player.ACTION_NONE) {
+            // wait player to make a decision.
+            mWait.who = mCurrentPlayerInx;
+            mWait.action = Player.ACTION_CHUPAI;
+            // what can u do?
+            mWait.action |= player.checkAction(player.mLastCard, mCurrentPlayerInx);
+            Log.i(TAG, "Player " + mCurrentPlayerInx + " checkAction1 " + mWait.action);
+            // make ur decision. AI will post a msg to main handler
+            player.chooseAction(player.mLastCard, mCurrentPlayerInx);
+            Log.i(TAG, "Player " + mCurrentPlayerInx + " chooseAction1 " + mWait.action);
+        } else if(mTmpCard != null && mWait.action == Player.ACTION_NONE) {
+            mWait.who = mCurrentPlayerInx;
+            mWait.action |= player.checkAction(mTmpCard, mCurrentPlayerInx);
+            Log.i(TAG, "Player " + mCurrentPlayerInx + " checkAction2 " + mWait.action);
+            if(mWait.action != Player.ACTION_NONE) {
+                player.chooseAction(mTmpCard, mCurrentPlayerInx);
+                Log.i(TAG, "Player " + mCurrentPlayerInx + " chooseAction2 " + mWait.action);
             } else {
-                Log.i(TAG, "111");
-                mWait.who = mCurrentPlayerInx;
-                mWait.action = Player.ACTION_CHUPAI;
-                mWait.value = 0;
-                // ask player to play a move
-                player.playCard();
-            }
-        } else if(mTmpCard != null) {
-            Log.i(TAG, "333");
-            if(player.checkHu()) {
-
-            } else {
-                Log.i(TAG, "222");
                 mTmpCard = null;
                 Card card = mTable.getCard();
                 if(card == null) {
                     over();
                     return;
                 }
-                player.addLastCard(card);
+                // prepare for next loop cycle
+                player.setLastCard(card);
+                Log.i(TAG, "Player " + mCurrentPlayerInx + " get a new card");
                 //mCurrentPlayerInx = (mCurrentPlayerInx+1)%mNumPlayers;
             }
-        }else{Log.i(TAG, "44444");}
+        }else {
+            Log.i(TAG, "Player " + mCurrentPlayerInx + " do nothing");
+        }
+    }
+
+    public void handleMessage(Message msg){
+        if(mWait.who != msg.arg1){
+            return;
+        }
+        Player player = mPlayers.get(mWait.who);
+        switch (msg.what) {
+            case Player.ACTION_ACK:
+                break;
+            case Player.ACTION_HU:
+                Log.i(TAG, "Player " + mWait.who + " ACTION_HU");
+                mState = GAME_SCORE;
+                player.makeAction(Player.ACTION_HU, 0);
+                break;
+            case Player.ACTION_CANCEL:
+                Log.i(TAG, "Player " + mWait.who + " ACTION_CANCEL");
+                if(mTmpCard != null) {
+                    mTmpCard = null;
+                    Card card = mTable.getCard();
+                    if(card == null) {
+                        over();
+                        return;
+                    }
+                    // prepare for next loop cycle
+                    player.setLastCard(card);
+                    Log.i(TAG, "Player " + mWait.who + " get a new card after cancel");
+                }
+                mWait.action &= ~Player.ACTION_HU;
+                player.makeAction(Player.ACTION_CANCEL, 0);
+                break;
+            case Player.ACTION_CHUPAI:
+                Log.i(TAG, "Player " + mWait.who + " ACTION_CHUPAI");
+                mTmpCard = player.rmCard(msg.arg2);
+                if(mTmpCard != null){
+                    mWait.who = -1;
+                    mWait.action = Player.ACTION_NONE;
+                    // rm the selected card and add mLastcard to mLastCardList
+                    player.addCard(player.mLastCard);
+                    player.mLastCard = null;
+                    // prepare for next loop cycle
+                    Log.i(TAG, "Player " + mWait.who + " switch to next player");
+                    mCurrentPlayerInx = (mCurrentPlayerInx+1)%mNumPlayers;
+                }
+                else{Log.i(TAG, "TMP CARD IS NULL");}
+                break;
+            default:
+                break;
+        }
     }
 
     public void over(){
@@ -137,31 +199,6 @@ public class Game {
         message.what = Player.ACTION_ACK;
         //mHandler.sendMessageDelayed(message,300);
         mHandler.sendMessage(message);
-    }
-
-    public void handleMessage(Message msg){
-        if(mWait.action != msg.what || mWait.who != msg.arg1){
-            return;
-        }
-        switch (msg.what) {
-            case Player.ACTION_ACK:
-                break;
-            case Player.ACTION_CHUPAI:
-                Player player = mPlayers.get(mWait.who);
-                mTmpCard = player.rmCard(msg.arg2);
-                if(mTmpCard != null){
-                    Log.i(TAG, "555");
-                    mWait.who = -1;
-                    mWait.action = Player.ACTION_UNKNOWN;
-                    player.addCard(player.mLastCard);
-                    player.mLastCard = null;
-                    mCurrentPlayerInx = (mCurrentPlayerInx+1)%mNumPlayers;
-                }
-                else{Log.i(TAG, "TMP CARD IS NULL");}
-                break;
-            default:
-                break;
-        }
     }
 
     public int getState() {

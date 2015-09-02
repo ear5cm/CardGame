@@ -52,16 +52,11 @@ public class GameActivity extends Activity {
 
     public class GameHandler extends Handler {
         public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case Player.ACTION_ACK:
+            if(msg.what == Player.ACTION_ACK) {
                     mGameView.postInvalidate();
-                    break;
-                case Player.ACTION_CHUPAI:
-                    mGame.handleMessage(msg);
-                    break;
-                default:
-                    break;
+                    return;
             }
+            mGame.handleMessage(msg);
         }
     };
 
