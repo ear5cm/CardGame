@@ -29,6 +29,8 @@ public class Player {
     final public static int ACTION_CANCEL = 1<<11;
 
     public List <Card> mCardList = new ArrayList<>();
+    public List <Card> mHuList = new ArrayList<>();
+    public List <Card> mHistory = new  ArrayList<>();
 
     public Card mBaida = null;
     // last card from table
@@ -41,10 +43,12 @@ public class Player {
     public Handler mHandler;
     public int mIdx;
     public int mWaitAction = ACTION_NONE;
+    public int mScore;
 
     public Player(Handler handler, int idx) {
         mHandler = handler;
         mIdx = idx;
+        mScore = 500000;
     }
 
     public void attachAI(AI ai) {
@@ -146,6 +150,7 @@ public class Player {
     public int makeAction(int action, int value) {
         if(action == ACTION_CANCEL) {
             mWaitAction = ACTION_NONE;
+        } else if(action == ACTION_HU) {
         }
         mAI.makeAction();
         return 0;
@@ -174,6 +179,22 @@ public class Player {
         List<Integer> hu = Rule.getInstance().checkHu(listlist, numBaida);
         if(hu == null) {
             return 0;
+        }
+        int i = 0;
+        int j = 0;
+        for(i = 0; i < mCardList.size(); i++) {
+            // find 1st baida
+            if(isBaida(mCardList.get(i))) {
+                break;
+            }
+        }
+        mHuList.clear();
+        for(int value : hu) {
+            if(value != -1) {
+                mHuList.add(mCardList.get(j++));
+            } else {
+                mHuList.add(mCardList.get(i++));
+            }
         }
         return 1;
     }
@@ -234,6 +255,7 @@ public class Player {
 
     public void reset(){
         mCardList.clear();
+        mHistory.clear();
         mBaida = null;
         mLastCard = null;
         mTmpCard = null;

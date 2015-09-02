@@ -10,10 +10,22 @@ import java.util.Collections;
  */
 public class Table {
     private static final String TAG = "Table";
+    private static Table mInstance = null;
 
     private List<Card> mCardList = new ArrayList<>();
 
     public Table() {
+    }
+
+    public static Table getInstance() {
+        if(mInstance == null) {
+            mInstance = new Table();
+        }
+        return mInstance;
+    }
+
+    public int getCardNum() {
+        return mCardList.size();
     }
 
     public void reset() {

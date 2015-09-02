@@ -20,7 +20,9 @@ public class Game {
     final public static int GAME_OVER = 4;
 
     private Handler mHandler;
-    private Table mTable = new Table();;
+    private Table mTable = null;
+    private int betBase = 10000;
+    private int aword = 0;
 
     public List<Player> mPlayers = new ArrayList<>();
     public int mState = GAME_UNKNOWN;
@@ -28,6 +30,7 @@ public class Game {
     public Card mTmpCard = null;
     public int mZhuangPlayerIdx = 0;
     public int mCurrentPlayerInx = 0;
+    public int mHuPlayerIdx = 0;
     public int mNumPlayers = 0;
 
     public GameWait mWait = null;
@@ -35,6 +38,7 @@ public class Game {
     public Game(Handler handler) {
         super();
         mHandler = handler;
+        mTable = Table.getInstance();
         mWait = new GameWait();
         mWait.action = Player.ACTION_NONE;
         init();
@@ -64,6 +68,7 @@ public class Game {
         mTmpCard = null;
         mWait.action = Player.ACTION_NONE;
         mState = GAME_READY;
+        mCurrentPlayerInx = mZhuangPlayerIdx;
     }
 
     public void start() {
@@ -155,6 +160,17 @@ public class Game {
             case Player.ACTION_HU:
                 Log.i(TAG, "Player " + mWait.who + " ACTION_HU");
                 mState = GAME_SCORE;
+                mHuPlayerIdx = mWait.who;
+                int loser = (mHuPlayerIdx+1)%mPlayers.size();
+                aword = betBase;
+                if(player.mLastCard != null) {
+                    aword *= 2;
+                }
+                player.mScore += aword;
+                mPlayers.get(loser).mScore -= aword;
+                if(mZhuangPlayerIdx == player.mIdx) {
+                    mZhuangPlayerIdx = player.mIdx;
+                }
                 player.makeAction(Player.ACTION_HU, 0);
                 break;
             case Player.ACTION_CANCEL:

@@ -85,9 +85,9 @@ public class GameView extends View {
             //color = Color.GREEN;
             color = 0xff008800;
         } else if(card.mType == Card.CARD_TYPE_BING) {
-            color = Color.BLUE;
+            color = 0xff000088;
         } else if(card.mType == Card.CARD_TYPE_WAN) {
-            color = Color.RED;
+            color = 0xff880000;
         }
         float stroke = 1.0f;
         float shadow = 5.0f;
@@ -125,6 +125,37 @@ public class GameView extends View {
         paint.setColor(0x3300cccc);
         canvas.drawRoundRect(new RectF(x + (w - shadow) / 2, y, x + w - shadow, y + h - shadow), round, round, paint);
         drawText(x + w * 3 / 4, y + h / 2, canvas, 70, Color.BLACK, "取消", Paint.Align.CENTER);
+    }
+
+    private void drawPlayground(Canvas canvas) {
+        float x = mWidth/60;
+        float y = mHeight/30;
+        float w = mWidth/3;
+        float h = mHeight/3.5f;
+        float shadow = 5.0f;
+        float round = 10;
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(0xcc666666);
+        canvas.drawRoundRect(new RectF(x + shadow, y + shadow, x + w, y + h), round, round, paint);
+        String str = null;
+        paint.setColor(0xcccc0000);
+        for(Player player : mGame.mPlayers) {
+            if(player.mIdx == 0) {
+                str = "玩家: " + player.mScore;
+                if(mGame.mZhuangPlayerIdx == player.mIdx) {
+                    canvas.drawOval(new RectF(x + w * 2/7, y+h/4 , x + w * 2/7+30, y+h/4+30), paint);
+                }
+                drawText(x + w * 3/7, y+h/4, canvas, 30, Color.BLACK, str, Paint.Align.LEFT);
+            } else {
+                str = "电脑: " + player.mScore;
+                if(mGame.mZhuangPlayerIdx == player.mIdx) {
+                    canvas.drawOval(new RectF(x + w * 2/7, y+h*2/4 , x + w * 2/7+30, y+h*2/4+30), paint);
+                }
+                drawText(x + w * 3/7, y+h*2/4, canvas, 30, Color.BLACK, str, Paint.Align.LEFT);
+            }
+        }
+        str = "剩余: " + Table.getInstance().getCardNum();
+        drawText(x + w * 3 / 7, y + h * 3 / 4, canvas, 30, Color.BLACK, str, Paint.Align.LEFT);
     }
 
     private void drawText(float left, float top, Canvas canvas, int textSize,
@@ -172,16 +203,35 @@ public class GameView extends View {
         */
     }
 
+    private void drawScore(Canvas canvas) {
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(0xaa666666);
+        canvas.drawRect(0, 0, mWidth, mHeight, paint);
+        Player player = mGame.mPlayers.get(mGame.mHuPlayerIdx);
+        drawText(640, 380, canvas, 100, Color.GREEN, "Touch to RESTART!", Paint.Align.CENTER);
+        /*
+        int i = 0;
+        for(Card card : player.mHuList) {
+            drawCard(canvas, card, mWidth/16+i*mCardWidth0, (mHeight-mCardHeight0)/2, mCardWidth0, mCardHeight0);
+        }*/
+        //drawText(640, 380, canvas, 100, Color.GREEN, "Touch to RESTART!", Paint.Align.CENTER);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         //setBackgroundColor(color);
         //Log.i(TAG, "w: " + getWidth() + " h: " + getHeight());
+        drawPlayground(canvas);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(0xaa666666);
         int state = mGame.getState();
         if(state == Game.GAME_READY) {
-            drawText(640, 380, canvas, 100, Color.GREEN, "Touch screen to START!", Paint.Align.CENTER);
+            canvas.drawRect(0, 0, mWidth, mHeight, paint);
+            drawText(640, 380, canvas, 100, Color.BLACK, "点击屏幕开始", Paint.Align.CENTER);
         } else if (state == Game.GAME_OVER) {
-            drawText(640, 380, canvas, 100, Color.GREEN, "GAME OVER!", Paint.Align.CENTER);
+            canvas.drawRect(0, 0, mWidth, mHeight, paint);
+            drawText(640, 380, canvas, 100, Color.DKGRAY, "游戏结束", Paint.Align.CENTER);
         } else {
             if(mGame.mBaida != null) {
                 drawCard(canvas, mGame.mBaida, mBaidaOffX, mBaidaOffY, mBaidaWidth, mBaidaHeight);
@@ -204,7 +254,7 @@ public class GameView extends View {
                 }
                 mGame.loop();
             } else if(state == Game.GAME_SCORE) {
-                drawText(640, 380, canvas, 100, Color.GREEN, "Touch to RESTART!", Paint.Align.CENTER);
+                drawScore(canvas);
             }
         }
     }
@@ -320,7 +370,7 @@ public class GameView extends View {
         mCardWidth1 = mWidth*2/16/3;
         mCardHeight1 = mHeight*2/12;
         mPlayerOffX1 = mWidth - mWidth/16;
-        mPlayerOffY1 = mCardHeight0/10;
+        mPlayerOffY1 = mHeight/30;
 
         mBaidaWidth = mWidth/16;
         mBaidaHeight = mHeight/4;
