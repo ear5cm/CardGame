@@ -12,9 +12,11 @@ public class AICPU extends AI {
     void onChooseAction() {
         Message message = new Message();
         message.what = Player.ACTION_HU;
+        //message.what = Player.ACTION_CANCEL;
         message.arg1 = mPlayer.mIdx;
         //mHandler.sendMessageDelayed(message,300);
         mPlayer.mHandler.sendMessage(message);
+        //onPlayCard();
         Log.i(TAG, "Player 0" + " send Action " + Player.ACTION_HU);
     }
 

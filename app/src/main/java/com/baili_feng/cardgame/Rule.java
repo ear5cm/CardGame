@@ -35,8 +35,8 @@ public class Rule {
     public Rule() {
     }
 
-    public List<Integer> checkHu(List<List<Integer>> list, int numBaida) {
-        List<Integer> result = new ArrayList<>();
+    public List<List<Integer>> checkHu(List<List<Integer>> list, int numBaida) {
+        List<List<Integer>> result = new ArrayList<>();
         if(list.size() != 3) {
             return null;
         }
@@ -46,6 +46,7 @@ public class Rule {
         cg.jiang = false;
         cg.baida = numBaida;
         for(int i = 0; i < 3; i++) {
+            List<Integer> rlist = new ArrayList<>();
             if(list.get(i).size() > 0)
             {
                 cg.cards.clear();
@@ -58,8 +59,9 @@ public class Rule {
                 }
                 cg.jiang |= vcg.get(0).jiang;
                 cg.baida -= vcg.get(0).baida;
-                result.addAll(vcg.get(0).cards);
+                rlist.addAll(vcg.get(0).cards);
             }
+            result.add(rlist);
         }
         Log.i(TAG, "hu result: " + result);
         return result;

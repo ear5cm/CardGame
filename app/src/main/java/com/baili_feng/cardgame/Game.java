@@ -103,10 +103,11 @@ public class Game {
             over();
             return;
         }
-        if(mPlayers.get(mCurrentPlayerInx).mCardList.size() == 13) {
-            mPlayers.get(mCurrentPlayerInx).setLastCard(card);
+        Player player = mPlayers.get(mCurrentPlayerInx);
+        if(player.mCardList.size() == 13) {
+            player.setLastCard(card);
         } else {
-            mPlayers.get(mCurrentPlayerInx).addCard(card);
+            player.addCard(card);
         }
         //Log.i(TAG, "Player " + mCurrentPlayerInx + " add Card: " + card.mValue + "/" + card.mType);
         mCurrentPlayerInx = (mCurrentPlayerInx + 1) % mNumPlayers;
@@ -121,17 +122,17 @@ public class Game {
             mWait.action = Player.ACTION_CHUPAI;
             // what can u do?
             mWait.action |= player.checkAction(player.mLastCard, mCurrentPlayerInx);
-            Log.i(TAG, "Player " + mCurrentPlayerInx + " checkAction1 " + mWait.action);
+            Log.i(TAG, "Player " + mCurrentPlayerInx + " checkAction1 " + Integer.toBinaryString(mWait.action));
             // make ur decision. AI will post a msg to main handler
             player.chooseAction(player.mLastCard, mCurrentPlayerInx);
-            Log.i(TAG, "Player " + mCurrentPlayerInx + " chooseAction1 " + mWait.action);
+            Log.i(TAG, "Player " + mCurrentPlayerInx + " chooseAction1 " + Integer.toBinaryString(mWait.action));
         } else if(mTmpCard != null && mWait.action == Player.ACTION_NONE) {
             mWait.who = mCurrentPlayerInx;
-            mWait.action |= player.checkAction(mTmpCard, mCurrentPlayerInx);
-            Log.i(TAG, "Player " + mCurrentPlayerInx + " checkAction2 " + mWait.action);
+            mWait.action |= player.checkAction(mTmpCard, (mCurrentPlayerInx+1)%mNumPlayers);
+            Log.i(TAG, "Player " + mCurrentPlayerInx + " checkAction2 " + Integer.toBinaryString(mWait.action));
             if(mWait.action != Player.ACTION_NONE) {
                 player.chooseAction(mTmpCard, mCurrentPlayerInx);
-                Log.i(TAG, "Player " + mCurrentPlayerInx + " chooseAction2 " + mWait.action);
+                Log.i(TAG, "Player " + mCurrentPlayerInx + " chooseAction2 " + Integer.toBinaryString(mWait.action));
             } else {
                 mTmpCard = null;
                 Card card = mTable.getCard();
@@ -168,9 +169,11 @@ public class Game {
                 }
                 player.mScore += aword;
                 mPlayers.get(loser).mScore -= aword;
-                if(mZhuangPlayerIdx == player.mIdx) {
+                mZhuangPlayerIdx = (mZhuangPlayerIdx+1)%mNumPlayers;
+                /*
+                if(mZhuangPlayerIdx != player.mIdx) {
                     mZhuangPlayerIdx = player.mIdx;
-                }
+                }*/
                 player.makeAction(Player.ACTION_HU, 0);
                 break;
             case Player.ACTION_CANCEL:
@@ -195,10 +198,15 @@ public class Game {
                 if(mTmpCard != null){
                     mWait.who = -1;
                     mWait.action = Player.ACTION_NONE;
+                    player.mHistory.add(mTmpCard);
                     // rm the selected card and add mLastcard to mLastCardList
                     player.addCard(player.mLastCard);
                     player.mLastCard = null;
                     // prepare for next loop cycle
+                    if(msg.arg2 != player.mCardList.size() - 1) {
+                        // cardList changed
+                        player.checkTing();
+                    }
                     Log.i(TAG, "Player " + mWait.who + " switch to next player");
                     mCurrentPlayerInx = (mCurrentPlayerInx+1)%mNumPlayers;
                 }

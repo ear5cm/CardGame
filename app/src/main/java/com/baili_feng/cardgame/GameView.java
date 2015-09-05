@@ -125,6 +125,7 @@ public class GameView extends View {
         paint.setColor(0x3300cccc);
         canvas.drawRoundRect(new RectF(x + (w - shadow) / 2, y, x + w - shadow, y + h - shadow), round, round, paint);
         drawText(x + w * 3 / 4, y + h / 2, canvas, 70, Color.BLACK, "取消", Paint.Align.CENTER);
+        canvas.toString();
     }
 
     private void drawPlayground(Canvas canvas) {
@@ -137,6 +138,7 @@ public class GameView extends View {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setColor(0xcc666666);
         canvas.drawRoundRect(new RectF(x + shadow, y + shadow, x + w, y + h), round, round, paint);
+        canvas.drawRoundRect(new RectF(x + shadow, y + shadow + h, x + w, y + 2.3f * h), round, round, paint);
         String str = null;
         paint.setColor(0xcccc0000);
         for(Player player : mGame.mPlayers) {
@@ -188,12 +190,47 @@ public class GameView extends View {
             inc = -1;
             offlast = w*mLastCardOff*inc;
         }
+        Card unknownCard = new Card();
+        unknownCard.mType = Card.CARD_TYPE_UNKNOWN;
+        unknownCard.mValue = 0;
         int i;
-        for(i = 0; i < player.mCardList.size(); i++) {
-            drawCard(canvas, player.mCardList.get(i), x+w*i*inc, y, w, h);
+        if(idx == 0) {
+            for (i = 0; i < player.mCardList.size(); i++) {
+                drawCard(canvas, player.mCardList.get(i), x + w * i * inc, y, w, h);
+            }
+            if (player.mLastCard != null) {
+                drawCard(canvas, player.mLastCard, x + w * i * inc + offlast, y, w, h);
+            }
+        } else {
+            for (i = 0; i < player.mCardList.size(); i++) {
+                drawCard(canvas, unknownCard, x + w * i * inc, y, w, h);
+                //drawCard(canvas, player.mCardList.get(i), x + w * i * inc, y, w, h);
+            }
+            if (player.mLastCard != null) {
+                drawCard(canvas, unknownCard, x + w * i * inc + offlast, y, w, h);
+                //drawCard(canvas, player.mLastCard, x + w * i * inc + offlast, y, w, h);
+            }
         }
-        if(player.mLastCard != null) {
-            drawCard(canvas, player.mLastCard, x + w * i * inc + offlast, y, w, h);
+        i = 0;
+        if(idx == 0) {
+            if(player.mTingList != null) {
+                for(Player.Ting ting : player.mTingList) {
+                    drawCard(canvas, ting.card, 50+40*(i%9), 250+80*(i/9), 40, 80);
+                    i++;
+                }
+            }
+            if(player.mAdvise != null) {
+                drawCard(canvas, player.mAdvise, 50+40*i++, 250, 60, 120);
+            }
+        }
+        if(idx == 0) {
+            for(i = 0; i < player.mHistory.size(); i++) {
+                drawCard(canvas, player.mHistory.get(i), 470+40*(i%20), 350+80*(i/20), 40, 80);
+            }
+        }else {
+            for(i = 0; i < player.mHistory.size(); i++) {
+                drawCard(canvas, player.mHistory.get(i), mWidth-70-40*(i%20), 250-80*(i/20), 40, 80);
+            }
         }
         /*
         if(idx == 0) {
@@ -208,13 +245,13 @@ public class GameView extends View {
         paint.setColor(0xaa666666);
         canvas.drawRect(0, 0, mWidth, mHeight, paint);
         Player player = mGame.mPlayers.get(mGame.mHuPlayerIdx);
-        drawText(640, 380, canvas, 100, Color.GREEN, "Touch to RESTART!", Paint.Align.CENTER);
-        /*
+
         int i = 0;
         for(Card card : player.mHuList) {
-            drawCard(canvas, card, mWidth/16+i*mCardWidth0, (mHeight-mCardHeight0)/2, mCardWidth0, mCardHeight0);
-        }*/
-        //drawText(640, 380, canvas, 100, Color.GREEN, "Touch to RESTART!", Paint.Align.CENTER);
+            drawCard(canvas, card, mWidth/16+(i++)*mCardWidth0, (mHeight-mCardHeight0)/2, mCardWidth0, mCardHeight0);
+        }
+
+        //drawText(640, 380, canvas, 100, Color.GREEN, "点击继续", Paint.Align.CENTER);
     }
 
     @Override
@@ -242,14 +279,17 @@ public class GameView extends View {
             for(i = 0; i < mGame.mPlayers.size(); i++) {
                 drawPlayer(canvas, i);
             }
+            /*
             if(mGame.mTmpCard != null) {
                 drawCard(canvas, mGame.mTmpCard, (mWidth-mCardWidth0)/2, (mHeight-mCardHeight0)/2, mCardWidth0, mCardHeight0);
             }
+            */
 
             if(state == Game.GAME_PREPARE) {
                 mGame.prepare();
             } else if(state == Game.GAME_LOOP) {
-                if(mGame.mPlayers.get(0).mWaitAction != Player.ACTION_NONE) {
+                if((mGame.mPlayers.get(0).mWaitAction & Player.ACTION_HU) == Player.ACTION_HU) {
+                //if(mGame.mPlayers.get(0).mWaitAction != Player.ACTION_NONE) {
                     drawActionBar(canvas, Player.ACTION_HU | Player.ACTION_CANCEL);
                 }
                 mGame.loop();

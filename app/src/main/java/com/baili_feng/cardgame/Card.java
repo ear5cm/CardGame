@@ -23,4 +23,8 @@ public class Card {
         this.mType = type;
     }
 
+    public String toString(){
+        return Integer.toString(mType * 10) + Integer.toString(mValue);
+    }
+
 }
