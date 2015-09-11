@@ -1,10 +1,14 @@
 package com.baili_feng.cardgame;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
@@ -40,6 +44,11 @@ public class GameView extends View {
     private float mBaidaHeight = 0;
     private float mBaidaOffX = 0;
     private float mBaidaOffY = 0;
+
+    private Bitmap mImgBack = null;
+    private Bitmap[] mImgTiao = null;
+    private Bitmap[] mImgBing = null;
+    private Bitmap[] mImgWan = null;
 
     public void setGame(Game game) {
         mGame = game;
@@ -105,6 +114,23 @@ public class GameView extends View {
         canvas.drawRoundRect(new RectF(x, y, x + w - shadow, y + h - shadow), round, round, paint);
         //drawRectLine(canvas, x, y, x + w - shadow, y + h - shadow, color, stroke);
         drawText(x + w / 2, y + h / 2.5f, canvas, (int) (h / 4), color, " " + card.mValue + " ", Paint.Align.CENTER);
+
+        if(mImgBack == null || mImgTiao == null || mImgBing == null || mImgWan == null) {
+            return;
+        }
+        Bitmap bmp = null;
+        if(card.mValue == 0) {
+            bmp = mImgBack;
+        } else if(card.mType == Card.CARD_TYPE_TIAO) {
+            bmp = mImgTiao[card.mValue];
+        } else if(card.mType == Card.CARD_TYPE_BING) {
+            bmp = mImgBing[card.mValue];
+        } else if(card.mType == Card.CARD_TYPE_WAN) {
+            bmp = mImgWan[card.mValue];
+        }
+        if(bmp != null) {
+            canvas.drawBitmap(bmp, new Rect(0, 0, bmp.getWidth(), bmp.getHeight()), new RectF(x, y, x + w - shadow, y + h - shadow), null);
+        }
     }
 
     private void drawActionBar(Canvas canvas, int action) {
@@ -125,7 +151,6 @@ public class GameView extends View {
         paint.setColor(0x3300cccc);
         canvas.drawRoundRect(new RectF(x + (w - shadow) / 2, y, x + w - shadow, y + h - shadow), round, round, paint);
         drawText(x + w * 3 / 4, y + h / 2, canvas, 70, Color.BLACK, "取消", Paint.Align.CENTER);
-        canvas.toString();
     }
 
     private void drawPlayground(Canvas canvas) {
@@ -418,6 +443,48 @@ public class GameView extends View {
         mBaidaOffY = mHeight/18;
 
         mLastCardOff = 0.2f;
+
+        initImage(getResources());
+    }
+
+    public void initImage(Resources res) {
+        mImgBack = BitmapFactory.decodeResource(res, R.mipmap.back);
+
+        mImgTiao = new Bitmap[10];
+        mImgTiao[0] = BitmapFactory.decodeResource(res, R.mipmap.back);
+        mImgTiao[1] = BitmapFactory.decodeResource(res, R.mipmap.tiao_1);
+        mImgTiao[2] = BitmapFactory.decodeResource(res, R.mipmap.tiao_2);
+        mImgTiao[3] = BitmapFactory.decodeResource(res, R.mipmap.tiao_3);
+        mImgTiao[4] = BitmapFactory.decodeResource(res, R.mipmap.tiao_4);
+        mImgTiao[5] = BitmapFactory.decodeResource(res, R.mipmap.tiao_5);
+        mImgTiao[6] = BitmapFactory.decodeResource(res, R.mipmap.tiao_6);
+        mImgTiao[7] = BitmapFactory.decodeResource(res, R.mipmap.tiao_7);
+        mImgTiao[8] = BitmapFactory.decodeResource(res, R.mipmap.tiao_8);
+        mImgTiao[9] = BitmapFactory.decodeResource(res, R.mipmap.tiao_9);
+
+        mImgBing = new Bitmap[10];
+        mImgBing[0] = BitmapFactory.decodeResource(res, R.mipmap.back);
+        mImgBing[1] = BitmapFactory.decodeResource(res, R.mipmap.bing_1);
+        mImgBing[2] = BitmapFactory.decodeResource(res, R.mipmap.bing_2);
+        mImgBing[3] = BitmapFactory.decodeResource(res, R.mipmap.bing_3);
+        mImgBing[4] = BitmapFactory.decodeResource(res, R.mipmap.bing_4);
+        mImgBing[5] = BitmapFactory.decodeResource(res, R.mipmap.bing_5);
+        mImgBing[6] = BitmapFactory.decodeResource(res, R.mipmap.bing_6);
+        mImgBing[7] = BitmapFactory.decodeResource(res, R.mipmap.bing_7);
+        mImgBing[8] = BitmapFactory.decodeResource(res, R.mipmap.bing_8);
+        mImgBing[9] = BitmapFactory.decodeResource(res, R.mipmap.bing_9);
+
+        mImgWan = new Bitmap[10];
+        mImgWan[0] = BitmapFactory.decodeResource(res, R.mipmap.back);
+        mImgWan[1] = BitmapFactory.decodeResource(res, R.mipmap.wan_1);
+        mImgWan[2] = BitmapFactory.decodeResource(res, R.mipmap.wan_2);
+        mImgWan[3] = BitmapFactory.decodeResource(res, R.mipmap.wan_3);
+        mImgWan[4] = BitmapFactory.decodeResource(res, R.mipmap.wan_4);
+        mImgWan[5] = BitmapFactory.decodeResource(res, R.mipmap.wan_5);
+        mImgWan[6] = BitmapFactory.decodeResource(res, R.mipmap.wan_6);
+        mImgWan[7] = BitmapFactory.decodeResource(res, R.mipmap.wan_7);
+        mImgWan[8] = BitmapFactory.decodeResource(res, R.mipmap.wan_8);
+        mImgWan[9] = BitmapFactory.decodeResource(res, R.mipmap.wan_9);
     }
 
 }
